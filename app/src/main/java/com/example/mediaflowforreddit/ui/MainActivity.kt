@@ -1,7 +1,8 @@
-package com.example.mediaflowforreddit
+package com.example.mediaflowforreddit.ui
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import com.example.mediaflowforreddit.R
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
