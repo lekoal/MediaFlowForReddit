@@ -1,6 +1,7 @@
 plugins {
     id ("com.android.application")
     id ("org.jetbrains.kotlin.android")
+    id ("kotlin-kapt")
 }
 
 android {
@@ -12,6 +13,12 @@ android {
         targetSdk = Config.TARGET_SDK_DEPENDENCY
         versionCode = Releases.VERSION_CODE_DEPENDENCY
         versionName = Releases.VERSION_NAME_DEPENDENCY
+
+        javaCompileOptions {
+            annotationProcessorOptions {
+                arguments["room.schemaLocation"] = "$projectDir/schemas"
+            }
+        }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -47,8 +54,18 @@ dependencies {
     //OkHTTP
     implementation (OkHttp.OKHTTP_DEPENDENCY)
 
-    //Retrofit 2
+    //Coroutines
+    implementation(Coroutines.COROUTINE_CORE_DEPENDENCY)
+    implementation(Coroutines.COROUTINE_ANDROID_DEPENDENCY)
 
+    //Room
+    implementation(Room.ROOM_KTX_DEPENDENCY)
+    kapt(Room.ROOM_COMPILER_DEPENDENCY)
+    implementation(Room.ROOM_RUNTIME_DEPENDENCY)
 
+    //Koin
+    implementation(Koin.KOIN_ANDROID_DEPENDENCY)
+    implementation(Koin.KOIN_ANDROID_COMPAT_DEPENDENCY)
+    implementation(Koin.KOIN_CORE_DEPENDENCY)
 
 }
