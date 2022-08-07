@@ -1,6 +1,8 @@
 package com.example.mediaflowforreddit.ui.main
 
+import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Bundle
 import android.util.Base64
@@ -22,17 +24,24 @@ import java.time.temporal.ChronoUnit
 
 private const val ERROR_TAG = "ERROR_TAG"
 
+private const val SETTINGS_PREFS = "app_settings"
+private const val TOKEN_RECEIVED = "TokenReceived"
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
+    private lateinit var appSettings: SharedPreferences
+
     private val viewModel: MainActivityViewModel by
-    inject<MainActivityViewModel>(named("main_activity_view_model"))
+    inject(named("main_activity_view_model"))
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        appSettings = getSharedPreferences(SETTINGS_PREFS, Context.MODE_PRIVATE)
 
         viewModel.getAll()
         startSignIn()
@@ -40,15 +49,18 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (intent != null && intent.action.equals(Intent.ACTION_VIEW)) {
-            val uri: Uri = intent.data!!
-            if (uri.getQueryParameter("error") != null) {
-                Log.e(ERROR_TAG, "Error: ${uri.getQueryParameter("error")}")
-            } else {
-                val state = uri.getQueryParameter("state")
-                if (state.equals(RedditAuthData.STATE)) {
-                    val code = uri.getQueryParameter("code")
-                    getAccessToken(code)
+        if (!isTokenReceived()) {
+            if (intent != null && intent.action.equals(Intent.ACTION_VIEW)) {
+                val uri: Uri = intent.data!!
+                if (uri.getQueryParameter("error") != null) {
+                    setTokenReceivedSharedState(false)
+                    Log.e(ERROR_TAG, "Error: ${uri.getQueryParameter("error")}")
+                } else {
+                    val state = uri.getQueryParameter("state")
+                    if (state.equals(RedditAuthData.STATE)) {
+                        val code = uri.getQueryParameter("code")
+                        getAccessToken(code)
+                    }
                 }
             }
         }
@@ -92,21 +104,21 @@ class MainActivity : AppCompatActivity() {
                     )
                     Log.i("MY_TAG", currentToken.toString())
                     viewModel.insert(currentToken)
+                    setTokenReceivedSharedState(true)
                 } catch (e: JSONException) {
                     Log.e(ERROR_TAG, "JSON error: $e")
                     e.printStackTrace()
+                    setTokenReceivedSharedState(false)
                 }
             }
         })
     }
 
     private fun startSignIn() {
-        viewModel.redditTokenList.observe(this) { tokenList ->
-            if (tokenList.isEmpty()) {
-                val url = RedditAuthData.AUTH_URL
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-                startActivity(intent)
-            }
+        if (!isTokenReceived()) {
+            val url = RedditAuthData.AUTH_URL
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            startActivity(intent)
         }
     }
 
@@ -117,5 +129,17 @@ class MainActivity : AppCompatActivity() {
     private fun tokenDateCompare(dateOld: LocalDateTime): Long {
         val dateNow = LocalDateTime.now()
         return dateOld.until(dateNow, ChronoUnit.HOURS)
+    }
+
+    private fun setTokenReceivedSharedState(isReceived: Boolean) {
+        appSettings.edit()
+            .putBoolean(TOKEN_RECEIVED, isReceived)
+            .apply()
+    }
+
+    private fun isTokenReceived(): Boolean {
+        return (appSettings.contains(TOKEN_RECEIVED)
+                && appSettings.getBoolean(TOKEN_RECEIVED, true))
+
     }
 }
